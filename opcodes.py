@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 class OpcodeValue(Enum):
     pass
@@ -26,12 +26,12 @@ class DoubleOperandOpcodeValue(OpcodeValue):
 
 
 class BranchOpcodeValue(OpcodeValue):
-    BEQ = 0b010010
-    BNE = 0b000010
-    BMI = 0b010001
-    BPL = 0b000001
-    BLS = 0b011010
-    BHI = 0b111010
+    BEQ = 0x0092
+    BNE = 0x0082
+    BMI = 0x0091
+    BPL = 0x0081
+    BLS = 0x009A
+    BHI = 0x00BA
 
 
 class SpecialInstructionsValue(OpcodeValue):
@@ -57,15 +57,16 @@ class AddressingMode(Enum):
 
 
 class Register(Enum):
-    R0 = 0
-    R1 = 1
-    R2 = 2
-    R3 = 3
-
     AC = 0
     X = 1
     SP = 2
     PC = 3
+
+    R0 = 0
+    R1 = 1
+    R2 = 2
+    R3 = 3
+    
     NONE = 0
 
 
@@ -82,6 +83,9 @@ class Opcode:
         bytes: bytearray
         ):
         bytes.extend(self._generate_hex())
+        
+    def get_num_bytes(self):
+        return len(self._generate_hex())
 
 
 class SingleOperandOpcode(Opcode):
@@ -156,15 +160,42 @@ class DoubleOperandOpcode(Opcode):
         ):
         bytes.extend(self._generate_hex())
 
-class Label(Opcode):
+
+class BranchOpcode(Opcode):
+    
+    def __init__(self, opcode: BranchOpcodeValue, offset: int, label):
+        
+        self.opcode = opcode
+        self.offset = offset
+        self.label = label
+        
+    def _generate_hex(self) -> bytearray:
+        return bytearray([00, self.opcode.value, (self.offset & 0xFF00) >> 8, self.offset & 0x00FF])
+    
+    def get_num_bytes(self):
+        return 4
+    
+class Halt(Opcode):
+    
+    def __init__(self):
+        opcode = SpecialInstructionsValue.HALT
+    
+    def _generate_hex(self) -> bytearray:
+        return bytearray([0])
+class Label():
     
     def __init__(self, name, address):
         self.name = name
         self.address= address
     
-    def _generate_hex(self) -> bytearray:
-        return bytearray()
-    
+    @staticmethod
+    def is_in_list(word, lst) -> None or int:
+        for i in lst:
+            if isinstance(i, Label) and i.name == word:
+                return i.address
+        return None
+                
+ 
 class Origin(Label):
     
     def __init__(self, address):
